@@ -1,0 +1,587 @@
+Recounts-Datasets Exploratory Analysis
+========================================================
+
+The main purpose of this script is to obtain refined subsets of the various datasets downloaded from ReCount : analysis-ready RNA seq gene count datasets [bowtie-bio.sourceforge.net/recount/]. In each of the 18 datsets present in this website, the read counts for different samples across different genes has been recorded for a number of RNA-Seq studies. I downloaded 6 datasets that had a sufficiently large number of samples involved and then looked at the RNA-seq patterns for each of the datasets. All these datasets are kept in the folder **Recounts-Data* in my home directory in the PPS cluster and also under the repo *recounts_analysis* in my Github repo.
+
+First we deal with the Gilad Data.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Gilad=read.table("Recounts-Data/Gilad Data/gilad_counts.txt",header=TRUE);
+phenotype_Gilad=read.table("Recounts-Data/Gilad Data/gilad_phenotype.txt",header=TRUE)
+mat_counts=counts_Gilad[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Gilad Data/counts_top_5000.txt");
+```
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts=read.table("Recounts-Data/Gilad Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=3;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,"Recounts-Data/Gilad Data/cluster_size_3/omega_final_Matt_Taddy.txt");
+write.table(alpha_final,"Recounts-Data/Gilad Data/cluster_size_3/alpha_final_Matt_Taddy.txt");
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+pdf(file="Recounts-Data/Gilad Data/cluster_size_3/Structure_Reads_Matt_Taddy.pdf");
+# - set margins
+par(mar=c(8,5.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+abline(v=1:6);
+
+namats=0:5 +0.5*(1:6-0:5);
+labels=c("1F","2F","3F","4M","5M","6M");
+axis(1,at=namats,labels,las=2);
+dev.off()
+
+```
+
+In the Gilad data, there are only 6 samples and it does not seem very interesting from the clstering point of view. It however does seem that even in this model, the third sample has a largely distinct behavior compared to the other samples. That could be a question of interest. There does not seem to be an obvious batch effect due to gender bias. Rather the individual bias of 3rd smaple is pretty strong.
+
+##  Worm Data
+
+Next up, we consider th Worms RNA-seq datasets. This is an interesting dataset, because usually in RNA-seq, most of the focus is on the Humnas or mice data. This data focuses on worms instead.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Worm=read.table("Recounts-Data/Worm Data/worm_counts.txt",header=TRUE);
+phenotype_Worm=read.table("Recounts-Data/Worm Data/worm_phenotypes.txt",header=TRUE)
+mat_counts=counts_Worm[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Worm Data/counts_top_5000.txt");
+```
+
+We fit Matt Taddy's model to the data and observe the Structureplot.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts=read.table("Recounts-Data/Worm Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=10;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Worm Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Worm Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+# modified_indices=heatmap(docweights)$rowInd; # run it for k=5
+
+# write.table(modified_indices,"Recounts-Data/Worm Data/hetamap_indices_5.txt");
+modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Worm Data/hetamap_indices_5.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Worm Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(12,4.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights[modified_indices,]),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+abline(v=1:46);
+
+namats=0:45 +0.5*(1:46-0:45);
+labels=as.character(phenotype_Worm[,3]);
+
+labels_modified=labels[modified_indices];
+axis(1,at=namats,labels_modified,las=2);
+dev.off()
+
+```
+
+
+
+The Worm data showed some clusters that are biologically intuitive and it would be good to investigate this RNA-seq data further to biologically explain the clustering.
+
+Now we focus on another dataset
+
+## Cheung HapMap Data
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Cheung=read.table("Recounts-Data/Cheung Data/cheung_counts.txt",header=TRUE);
+phenotype_Cheung=read.table("Recounts-Data/Cheung Data/cheung_phenotypes.txt",header=TRUE)
+mat_counts=counts_Cheung[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Cheung Data/counts_top_5000.txt");
+```
+
+Cheung and Gilad Data both have same sets of genes observed (they both are Human RNA-Seq data). While Gilad Data focused only on Liver, the Cheung Data phenotypic information is not given. The admixture modeling of this data can be given as 
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+
+counts=read.table("Recounts-Data/Cheung Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=5;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Cheung Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Cheung Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+# modified_indices=heatmap(docweights)$rowInd; # run it for k=5
+
+# write.table(modified_indices,"Recounts-Data/Worm Data/hetamap_indices_5.txt");
+#modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Worm Data/hetamap_indices_5.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Cheung Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(8,6.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+abline(v=1:41);
+
+namats=0:40 +0.5*(1:41-0:40);
+labels=paste0(1:41,as.character(phenotype_Cheung[,3]));
+axis(1,at=namats,labels,las=2);
+dev.off()
+
+
+```
+
+We now move on to our next dataset. We shall now look at the Wang Data. This is a tissue comparison data much like the GTEX dataet we have dealt with previously.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Wang=read.table("Recounts-Data/Wang Data/wang_counts.txt",header=TRUE);
+phenotype_Wang=read.table("Recounts-Data/Wang Data/wang_phenotype.txt",header=TRUE)
+mat_counts=counts_Wang[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Wang Data/counts_top_5000.txt");
+
+```
+
+The admixture level model for this data is given is presented next.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+
+counts=read.table("Recounts-Data/Wang Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=5;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Wang Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Wang Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+modified_indices=heatmap(docweights)$rowInd; # run it for k=5
+
+write.table(modified_indices,"Recounts-Data/Wang Data/hetamap_indices_5.txt");
+modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Wang Data/hetamap_indices_5.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Wang Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(8,6.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights[modified_indices,]),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+abline(v=1:22);
+
+namats=0:(dim(docweights)[1]-1) +0.5*(1:(dim(docweights)[1])-0:(dim(docweights)[1]-1));
+labels=as.character(phenotype_Wang[,2]);
+
+labels_modified=labels[modified_indices];
+axis(1,at=namats,labels_modified,las=2);
+dev.off()
+
+
+```
+
+Next up, we consider the Fly dataset. This is again a very unconventional dataset just like the Worms data and hopefully will produce interesting results.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Fly=read.table("Recounts-Data/Fly Data/fly_counts.txt",header=TRUE);
+phenotype_Fly=read.table("Recounts-Data/Fly Data/fly_phenotypes.txt",header=TRUE)
+mat_counts=counts_Fly[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Fly Data/counts_top_5000.txt");
+
+```
+
+The admixture or topic model for this kind of data probably makes more sense as there is a time course development of the fly from the embryo stage to the adult. It would be nice to see if that time course behvaior is reflected in the clustering or not.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+
+counts=read.table("Recounts-Data/Fly Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=3;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Fly Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Fly Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+modified_indices=heatmap(docweights)$rowInd; # run it for k=5
+
+write.table(modified_indices,"Recounts-Data/Fly Data/hetamap_indices_5.txt");
+modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Fly Data/hetamap_indices_5.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Fly Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(8,6.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+
+
+labels=as.character(phenotype_Fly[,3]);
+unique_labels=unique(labels);
+unique_sites=match(unique_labels,labels);
+unique_lines=c(unique_sites-1,dim(docweights)[1])
+abline(v=unique_lines);
+
+L=length(unique_lines);
+namats=unique_lines[1:(L-1)]+0.5*(unique_lines[2:L]-unique_lines[1:(L-1)]);
+
+axis(1,at=namats,unique_labels,las=2);
+dev.off()
+
+
+```
+
+Finally we consider the Pickrell data. It is again a multi tissue sample Human data.
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Pickrell=read.table("Recounts-Data/Pickrell Data/pickrell_counts.txt",header=TRUE);
+phenotype_Pickrell=read.table("Recounts-Data/Pickrell Data/pickrell_phenotype.txt",header=TRUE);
+mat_counts=counts_Pickrell[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Pickrell Data/counts_top_5000.txt");
+
+
+```
+
+
+The admixture or topic model clustering scheme for the Pickrell data is presented next. 
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+
+counts=read.table("Recounts-Data/Pickrell Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=10;
+Topic_Clus=topics(counts,K,kill=0,tol=0.005);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Pickrell Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Pickrell Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+#modified_indices=heatmap(docweights)$rowInd; # run it for k=5
+
+#write.table(modified_indices,"Recounts-Data/Pickrell Data/hetamap_indices_5.txt");
+#modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Pickrell Data/hetamap_indices_5.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Pickrell Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(8,6.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+
+
+labels=as.character(phenotype_Pickrell[,4]);
+unique_labels=unique(labels);
+unique_sites=match(unique_labels,labels);
+unique_lines=c(unique_sites-1,dim(docweights)[1])
+abline(v=unique_lines);
+
+L=length(unique_lines);
+namats=unique_lines[1:(L-1)]+0.5*(unique_lines[2:L]-unique_lines[1:(L-1)]);
+
+abline(v=unique_lines);
+
+
+#namats=0:(dim(docweights)[1]-1) +0.5*(1:(dim(docweights)[1])-0:(dim(docweights)[1]-1));
+
+axis(1,at=namats,unique_labels,las=2);
+dev.off()
+
+
+```
+
+
+Now we consider the Bodymap Data, which is equivalent to the Wang's data, meaning that it compares among multiple tissue samples and tries to cluster them. 
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts_Bodymap=read.table("Recounts-Data/Bodymap Data/bodymap_counts.txt",header=TRUE);
+phenotype_Bodymap=read.table("Recounts-Data/Bodymap Data/bodymap_phenotype.txt",header=TRUE)
+mat_counts=counts_Bodymap[,-1];
+dim_row_refined=dim(mat_counts)[1];
+counts=matrix(as.numeric(as.character(as.matrix(as.vector(mat_counts)))),nrow=dim_row_refined); 
+
+counts=t(counts)
+mean_Col=colMeans(counts);
+sd_Col=apply(counts,2,sd);
+CV_Col=sd_Col/mean_Col;
+order_mean=order(mean_Col,decreasing=TRUE);
+Numgenes=5000;
+counts_top_5000=counts[,order_mean[1:Numgenes]];
+
+write.table(counts_top_5000,"Recounts-Data/Bodymap Data/counts_top_5000.txt");
+
+```
+
+Now we use the Admixture or Topic model to obtain the cluster patterns for the BodyMap data
+
+```{r,echo=TRUE,eval=TRUE,cache=TRUE,warning=FALSE}
+
+counts=read.table("Recounts-Data/Bodymap Data/counts_top_5000.txt");
+counts=as.matrix(counts);
+library(maptpx); library(slam);
+K=2;
+Topic_Clus=topics(counts,K,kill=0,tol=0.001);
+
+omega_final=Topic_Clus$omega;
+docweights=Topic_Clus$omega;
+
+cluster_index=array(0,dim(docweights)[1]);
+for(i in 1:dim(docweights)[1])
+{
+  cluster_index[i]=which(docweights[i,]==max(docweights[i,]),arr.ind=TRUE);
+}
+
+alpha_final=Topic_Clus$theta;
+
+write.table(omega_final,paste0("Recounts-Data/Bodymap Data/cluster_size_",K,"/omega_final_Matt_Taddy.txt"));
+write.table(alpha_final,paste0("Recounts-Data/Bodymap Data/cluster_size_",K,"/alpha_final_Matt_Taddy.txt"));
+
+color=c("red","mediumorchid4","black","cyan","navyblue",
+  "brown4","darkgoldenrod1","darkgray","darkkhaki",
+  "burlywood3","hotpink","green","lightsalmon","yellow", "seagreen4");
+
+#modified_indices=heatmap(docweights)$rowInd; # run it for k=7
+
+#write.table(modified_indices,"Recounts-Data/Bodymap Data/heatmap_indices_7.txt");
+modified_indices=as.numeric(as.matrix(as.vector(read.table("Recounts-Data/Bodymap Data/heatmap_indices_7.txt"))));
+
+
+pdf(file=paste0("Recounts-Data/Bodymap Data/cluster_size_",K,"/Structure_Reads_Matt_Taddy.pdf"));
+# - set margins
+par(mar=c(8,6.25,2.5,2.5))
+
+# - get rid of space space between leftmost bar and y axis
+par(xaxs="i")
+
+k=dim(docweights)[2];
+# Make plot 
+# - plot data
+barplot(t(docweights[modified_indices,]),col=color[1:k],axisnames=F,space=0,border=NA,main=paste("Matt Taddy Model, No. of clusters =",k),las=1,ylim=c(0,1),cex.axis=1.5,cex.main=1.4)
+
+mtext("Class proportions",side=2,line=4,cex=1.3);
+abline(v=1:dim(docweights)[1]);
+
+namats=0:(dim(docweights)[1]-1) +0.5*(1:(dim(docweights)[1])-0:(dim(docweights)[1]-1));
+labels=as.character(phenotype_Bodymap[,3]);
+
+labels_modified=labels[modified_indices];
+axis(1,at=namats,labels_modified,las=2);
+dev.off()
+
+```
+
+
